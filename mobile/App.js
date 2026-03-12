@@ -4,6 +4,15 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { PosScreen } from "./src/screens/ScannerScreen";
 import { CatalogueScreen } from "./src/screens/CatalogueScreen";
+import { SalesInvoicesScreen } from "./src/screens/SalesInvoicesScreen";
+import { PurchaseOrdersScreen } from "./src/screens/PurchaseOrdersScreen";
+import { ShipmentsScreen } from "./src/screens/ShipmentsScreen";
+import { PaymentsReceiptsScreen } from "./src/screens/PaymentsReceiptsScreen";
+import { ExpensesScreen } from "./src/screens/ExpensesScreen";
+import { CategoriesScreen } from "./src/screens/CategoriesScreen";
+import { VendorsScreen } from "./src/screens/VendorsScreen";
+import { CustomersScreen } from "./src/screens/CustomersScreen";
+import { SummaryScreen } from "./src/screens/SummaryScreen";
 
 const TABS = {
   HOME: "HOME",
@@ -11,17 +20,78 @@ const TABS = {
   CATALOGUE: "CATALOGUE",
 };
 
+const HOME_SCREENS = {
+  DASHBOARD: "DASHBOARD",
+  SALES_INVOICES: "SALES_INVOICES",
+  PURCHASE_ORDERS: "PURCHASE_ORDERS",
+  SHIPMENTS: "SHIPMENTS",
+  PAYMENTS_RECEIPTS: "PAYMENTS_RECEIPTS",
+  EXPENSES: "EXPENSES",
+  CUSTOMERS: "CUSTOMERS",
+  CATEGORIES: "CATEGORIES",
+  VENDORS: "VENDORS",
+  SUMMARY: "SUMMARY",
+};
+
 export default function App() {
   const [tab, setTab] = useState(TABS.POS);
+  const [homeScreen, setHomeScreen] = useState(HOME_SCREENS.DASHBOARD);
 
   let content = null;
-  if (tab === TABS.HOME) content = <HomeScreen />;
-  else if (tab === TABS.POS) content = <PosScreen />;
-  else if (tab === TABS.CATALOGUE) content = <CatalogueScreen />;
+  if (tab === TABS.HOME) {
+    if (homeScreen === HOME_SCREENS.DASHBOARD) {
+      content = (
+        <HomeScreen
+          onNavigateTab={setTab}
+          onOpenSection={(key) => setHomeScreen(key)}
+        />
+      );
+    } else if (homeScreen === HOME_SCREENS.SALES_INVOICES) {
+      content = (
+        <SalesInvoicesScreen
+          onBack={() => setHomeScreen(HOME_SCREENS.DASHBOARD)}
+          onAddSale={() => {
+            setTab(TABS.POS);
+            setHomeScreen(HOME_SCREENS.DASHBOARD);
+          }}
+        />
+      );
+    } else if (homeScreen === HOME_SCREENS.PURCHASE_ORDERS) {
+      content = <PurchaseOrdersScreen onBack={() => setHomeScreen(HOME_SCREENS.DASHBOARD)} />;
+    } else if (homeScreen === HOME_SCREENS.SHIPMENTS) {
+      content = <ShipmentsScreen onBack={() => setHomeScreen(HOME_SCREENS.DASHBOARD)} />;
+    } else if (homeScreen === HOME_SCREENS.PAYMENTS_RECEIPTS) {
+      content = <PaymentsReceiptsScreen onBack={() => setHomeScreen(HOME_SCREENS.DASHBOARD)} />;
+    } else if (homeScreen === HOME_SCREENS.EXPENSES) {
+      content = <ExpensesScreen onBack={() => setHomeScreen(HOME_SCREENS.DASHBOARD)} />;
+    } else if (homeScreen === HOME_SCREENS.CUSTOMERS) {
+      content = <CustomersScreen onBack={() => setHomeScreen(HOME_SCREENS.DASHBOARD)} />;
+    } else if (homeScreen === HOME_SCREENS.CATEGORIES) {
+      content = <CategoriesScreen onBack={() => setHomeScreen(HOME_SCREENS.DASHBOARD)} />;
+    } else if (homeScreen === HOME_SCREENS.VENDORS) {
+      content = <VendorsScreen onBack={() => setHomeScreen(HOME_SCREENS.DASHBOARD)} />;
+    } else if (homeScreen === HOME_SCREENS.SUMMARY) {
+      content = <SummaryScreen onBack={() => setHomeScreen(HOME_SCREENS.DASHBOARD)} />;
+    }
+  } else if (tab === TABS.POS) {
+    content = <PosScreen />;
+  } else if (tab === TABS.CATALOGUE) {
+    content = <CatalogueScreen />;
+  }
 
   let subtitle = "";
-  if (tab === TABS.HOME) subtitle = "Summary dashboard";
-  else if (tab === TABS.POS) subtitle = "Point of Sale";
+  if (tab === TABS.HOME) {
+    if (homeScreen === HOME_SCREENS.DASHBOARD) subtitle = "Summary dashboard";
+    else if (homeScreen === HOME_SCREENS.SALES_INVOICES) subtitle = "Sales Invoices";
+    else if (homeScreen === HOME_SCREENS.PURCHASE_ORDERS) subtitle = "Purchase Orders";
+    else if (homeScreen === HOME_SCREENS.SHIPMENTS) subtitle = "Shipments";
+    else if (homeScreen === HOME_SCREENS.PAYMENTS_RECEIPTS) subtitle = "Payments & Receipts";
+    else if (homeScreen === HOME_SCREENS.EXPENSES) subtitle = "Expenses";
+    else if (homeScreen === HOME_SCREENS.CUSTOMERS) subtitle = "Customers";
+    else if (homeScreen === HOME_SCREENS.CATEGORIES) subtitle = "Categories";
+    else if (homeScreen === HOME_SCREENS.VENDORS) subtitle = "Vendors";
+    else if (homeScreen === HOME_SCREENS.SUMMARY) subtitle = "Summary";
+  } else if (tab === TABS.POS) subtitle = "Point of Sale";
   else if (tab === TABS.CATALOGUE) subtitle = "Product catalogue";
 
   return (
@@ -46,7 +116,10 @@ export default function App() {
             label="Home"
             icon="view-dashboard-outline"
             active={tab === TABS.HOME}
-            onPress={() => setTab(TABS.HOME)}
+            onPress={() => {
+              setTab(TABS.HOME);
+              setHomeScreen(HOME_SCREENS.DASHBOARD);
+            }}
           />
           <TabButton
             label="POS"
@@ -128,12 +201,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginHorizontal: 6,
     borderRadius: 999,
-    backgroundColor: "#111111",
+    backgroundColor: "#050505",
+    borderWidth: 1,
+    borderColor: "#111111",
     flexDirection: "column",
     gap: 2,
   },
-  tabButtonActive: { backgroundColor: "#ffffff" },
+  tabButtonActive: {
+    borderColor: "#ffffff",
+  },
   tabLabel: { color: "#888888", fontSize: 11 },
-  tabLabelActive: { color: "#000000", fontWeight: "600" },
+  tabLabelActive: { color: "#ffffff", fontWeight: "600" },
   content: { flex: 1, backgroundColor: "#000000" },
 });

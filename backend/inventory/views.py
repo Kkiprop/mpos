@@ -2,13 +2,25 @@ from decimal import Decimal
 from datetime import datetime, timedelta
 
 from django.db import transaction as db_transaction
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Count
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import Customer, Expense, Payment, Product, Return, Transaction, TransactionItem
+from .models import (
+    Customer,
+    Expense,
+    Payment,
+    Product,
+    Return,
+    Transaction,
+    TransactionItem,
+    Vendor,
+    PurchaseOrder,
+    PurchaseOrderItem,
+    Shipment,
+)
 from .serializers import (
     CustomerSerializer,
     ExpenseSerializer,
@@ -17,6 +29,9 @@ from .serializers import (
     ProductUpsertSerializer,
     ReturnSerializer,
     TransactionSerializer,
+    VendorSerializer,
+    PurchaseOrderSerializer,
+    ShipmentSerializer,
 )
 
 
@@ -173,7 +188,7 @@ def checkout(request):
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 def record_payment(request):
     """Record a payment against a transaction, including partial/credit sales.
 
@@ -184,6 +199,11 @@ def record_payment(request):
         "method": "cash" | "credit" | "airtel" | "mpesa" | "card"
     }
     """
+
+    if request.method == "GET":
+        payments = Payment.objects.select_related("transaction").order_by("-timestamp")[:200]
+        serializer = PaymentSerializer(payments, many=True)
+        return Response(serializer.data)
 
     data = request.data or {}
     transaction_id = data.get("transaction_id")
@@ -237,8 +257,13 @@ def record_payment(request):
     )
 
 
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 def create_expense(request):
+    if request.method == "GET":
+        expenses = Expense.objects.all().order_by("-created_at")[:200]
+        serializer = ExpenseSerializer(expenses, many=True)
+        return Response(serializer.data)
+
     serializer = ExpenseSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     expense = serializer.save()
@@ -251,6 +276,129 @@ def create_return(request):
     serializer.is_valid(raise_exception=True)
     ret = serializer.save()
     return Response(ReturnSerializer(ret).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+def list_transactions(request):
+    """List recent sales transactions for Sales Invoices screen."""
+
+    qs = Transaction.objects.all().order_by("-timestamp")[:200]
+    serializer = TransactionSerializer(qs, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["GET", "POST"])
+def customers_endpoint(request):
+    """List or create customers."""
+
+    if request.method == "GET":
+        customers = Customer.objects.all().order_by("-created_at")[:200]
+        serializer = CustomerSerializer(customers, many=True)
+        return Response(serializer.data)
+
+    serializer = CustomerSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    customer = serializer.save()
+    return Response(CustomerSerializer(customer).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "POST"])
+def vendors_endpoint(request):
+    """List or create vendors (suppliers)."""
+
+    if request.method == "GET":
+        vendors = Vendor.objects.all().order_by("-created_at")[:200]
+        serializer = VendorSerializer(vendors, many=True)
+        return Response(serializer.data)
+
+    serializer = VendorSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    vendor = serializer.save()
+    return Response(VendorSerializer(vendor).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "POST"])
+def purchase_orders_endpoint(request):
+    """List or create purchase orders with simple items."""
+
+    if request.method == "GET":
+        orders = PurchaseOrder.objects.select_related("vendor").prefetch_related("items__product").order_by("-created_at")[:200]
+        serializer = PurchaseOrderSerializer(orders, many=True)
+        return Response(serializer.data)
+
+    data = request.data or {}
+    items_payload = data.get("items") or []
+    serializer = PurchaseOrderSerializer(data=data)
+    serializer.is_valid(raise_exception=True)
+
+    with db_transaction.atomic():
+        po = PurchaseOrder.objects.create(
+            vendor=serializer.validated_data["vendor"],
+            total_amount=Decimal("0.00"),
+        )
+
+        total = Decimal("0.00")
+        for raw in items_payload:
+            product_id = raw.get("product")
+            quantity = int(raw.get("quantity", 0))
+            unit_cost_raw = raw.get("unit_cost", 0)
+            if not product_id or quantity <= 0:
+                continue
+            try:
+                unit_cost = Decimal(str(unit_cost_raw))
+            except Exception:
+                unit_cost = Decimal("0.00")
+
+            product = Product.objects.get(pk=product_id)
+            PurchaseOrderItem.objects.create(
+                purchase_order=po,
+                product=product,
+                quantity=quantity,
+                unit_cost=unit_cost,
+            )
+            total += unit_cost * quantity
+
+        po.total_amount = total
+        po.save(update_fields=["total_amount"])
+
+    out = PurchaseOrderSerializer(po)
+    return Response(out.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "POST"])
+def shipments_endpoint(request):
+    """List or create shipments for delivered sales."""
+
+    if request.method == "GET":
+        shipments = Shipment.objects.select_related("transaction").order_by("-created_at")[:200]
+        serializer = ShipmentSerializer(shipments, many=True)
+        return Response(serializer.data)
+
+    serializer = ShipmentSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    shipment = serializer.save()
+    return Response(ShipmentSerializer(shipment).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+def categories_summary(request):
+    """Return simple category stats based on products."""
+
+    rows = (
+        Product.objects.values("category")
+        .exclude(category="")
+        .annotate(product_count=Count("id"), total_stock=Sum("stock_quantity"))
+        .order_by("category")
+    )
+    data = [
+        {
+            "category": r["category"],
+            "product_count": r["product_count"],
+            "total_stock": r["total_stock"],
+        }
+        for r in rows
+    ]
+    return Response(data)
 
 
 @api_view(["GET"])

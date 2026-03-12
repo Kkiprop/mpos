@@ -8,6 +8,10 @@ from .models import (
     Return,
     Transaction,
     TransactionItem,
+    Vendor,
+    PurchaseOrder,
+    PurchaseOrderItem,
+    Shipment,
 )
 
 
@@ -70,3 +74,51 @@ class ReturnSerializer(serializers.ModelSerializer):
     class Meta:
         model = Return
         fields = ["id", "transaction_item", "quantity", "reason", "created_at"]
+
+
+class VendorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Vendor
+        fields = ["id", "name", "phone", "email", "address", "notes", "created_at"]
+
+
+class PurchaseOrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_barcode = serializers.CharField(source="product.barcode", read_only=True)
+
+    class Meta:
+        model = PurchaseOrderItem
+        fields = [
+            "id",
+            "product",
+            "product_name",
+            "product_barcode",
+            "quantity",
+            "unit_cost",
+        ]
+
+
+class PurchaseOrderSerializer(serializers.ModelSerializer):
+    vendor = VendorSerializer(read_only=True)
+    vendor_id = serializers.PrimaryKeyRelatedField(
+        source="vendor", queryset=Vendor.objects.all(), write_only=True
+    )
+    items = PurchaseOrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = PurchaseOrder
+        fields = ["id", "vendor", "vendor_id", "created_at", "total_amount", "items"]
+
+
+class ShipmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Shipment
+        fields = [
+            "id",
+            "transaction",
+            "address",
+            "status",
+            "notes",
+            "created_at",
+            "delivered_at",
+        ]

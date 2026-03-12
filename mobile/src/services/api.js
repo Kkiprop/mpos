@@ -50,6 +50,72 @@ export async function createExpense({ category, amount, description, recordedBy 
   return response.data;
 }
 
+export async function fetchExpenses() {
+  const response = await apiClient.get("/expenses/");
+  return response.data;
+}
+
+export async function fetchPayments() {
+  const response = await apiClient.get("/payments/");
+  return response.data;
+}
+
+export async function fetchTransactions() {
+  const response = await apiClient.get("/transactions/");
+  return response.data;
+}
+
+export async function fetchCustomers() {
+  const response = await apiClient.get("/customers/");
+  return response.data;
+}
+
+export async function createCustomer({ name, phone, email, notes }) {
+  const response = await apiClient.post("/customers/", {
+    name,
+    phone,
+    email,
+    notes,
+  });
+  return response.data;
+}
+
+export async function fetchVendors() {
+  const response = await apiClient.get("/vendors/");
+  return response.data;
+}
+
+export async function createVendor({ name, phone, email, address, notes }) {
+  const response = await apiClient.post("/vendors/", {
+    name,
+    phone,
+    email,
+    address,
+    notes,
+  });
+  return response.data;
+}
+
+export async function fetchPurchaseOrders() {
+  const response = await apiClient.get("/purchase-orders/");
+  return response.data;
+}
+
+export async function createPurchaseOrder(payload) {
+  const response = await apiClient.post("/purchase-orders/", payload);
+  return response.data;
+}
+
+export async function fetchShipments() {
+  const response = await apiClient.get("/shipments/");
+  return response.data;
+}
+
+export async function fetchCategoriesSummary() {
+  const response = await apiClient.get("/categories/");
+  return response.data;
+}
+
 export async function fetchDailyReport(dateString) {
   const response = await apiClient.get("/reports/daily/", {
     params: dateString ? { date: dateString } : {},

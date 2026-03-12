@@ -107,3 +107,46 @@ class Return(models.Model):
 
     def __str__(self) -> str:
         return f"Return {self.quantity} of {self.transaction_item_id}"
+
+
+class Vendor(models.Model):
+    name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=32, blank=True)
+    email = models.EmailField(blank=True)
+    address = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return self.name or f"Vendor {self.pk}"
+
+
+class PurchaseOrder(models.Model):
+    vendor = models.ForeignKey(Vendor, related_name="purchase_orders", on_delete=models.PROTECT)
+    created_at = models.DateTimeField(auto_now_add=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    def __str__(self) -> str:
+        return f"PO {self.pk} for {self.vendor_id}"
+
+
+class PurchaseOrderItem(models.Model):
+    purchase_order = models.ForeignKey(PurchaseOrder, related_name="items", on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.PROTECT)
+    quantity = models.PositiveIntegerField()
+    unit_cost = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self) -> str:
+        return f"POItem {self.product_id} x {self.quantity}"
+
+
+class Shipment(models.Model):
+    transaction = models.ForeignKey(Transaction, related_name="shipments", on_delete=models.CASCADE)
+    address = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=32, default="pending")
+    notes = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        return f"Shipment {self.pk} for Tx {self.transaction_id}"
