@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "MPOS Mobile",
+    "slug": "mpos-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "jsEngine": "hermes",
+    "icon": "./assets/icon.png",
+    "plugins": [
+      ["react-native-vision-camera"]
+    ],
+    "android": {
+      "package": "com.example.mposmobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.example.mposmobile"
+    }
+  }
+}
